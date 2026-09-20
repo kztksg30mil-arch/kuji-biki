@@ -344,23 +344,15 @@
 
     video.pause();
     video.currentTime = 0;
-    var playNow = function(){ video.play().catch(function(){}); };
-    // Some browsers need a tick after seeking back to 0 before play() takes;
-    // try immediately and once more on the next frame as a fallback.
-    playNow();
-    requestAnimationFrame(playNow);
 
-    // Some browsers (notably when this page is opened as a local file
-    // rather than served from a site) block the very first autoplay
-    // attempt even though the video is muted. If playback still hasn't
-    // actually started shortly after, show a tap-to-play button instead of
-    // silently sitting on the first frame — a real click always satisfies
-    // the browser's autoplay requirement.
-    timers.push(setTimeout(function(){
-      if (video.paused){
-        tapStartBtn.classList.add("is-visible");
-      }
-    }, 400));
+    // Always require a tap to start, instead of trying autoplay first and
+    // only falling back to this button when autoplay is blocked. Some
+    // browsers (iPhone Safari, when the video is muted + playsinline) allow
+    // autoplay outright, so the old "try autoplay, show the button only if
+    // it fails" logic meant the button never appeared there at all —
+    // playback just started on its own. Showing it unconditionally makes
+    // the experience identical on every device.
+    tapStartBtn.classList.add("is-visible");
   }
 
   video.addEventListener("playing", function(){
