@@ -186,6 +186,8 @@
 <div class="page">
   <div class="stage" id="stage" aria-live="polite">
     <video class="scene" id="video" src="draw-reveal.mp4" muted playsinline preload="auto"></video>
+    <audio id="sfxDrum" src="drumroll.mp3" preload="auto"></audio>
+    <audio id="sfxHit" src="dodon.mp3" preload="auto"></audio>
     <div class="name-slot" id="nameSlot"><span id="nameText"></span></div>
     <button class="tap-start" id="tapStart" type="button"><span>タップして再生</span></button>
   </div>
@@ -244,10 +246,13 @@
   var replayBtn = document.getElementById("replay");
   var tapStartBtn = document.getElementById("tapStart");
   var stageEl = document.getElementById("stage");
+  var sfxDrum = document.getElementById("sfxDrum");
+  var sfxHit = document.getElementById("sfxHit");
 
   var timers = [];
   var rafId = null;
   var fontFitted = false;
+  var hitPlayed = false;
 
   function clearTimers(){
     timers.forEach(function(t){ clearTimeout(t); });
@@ -301,6 +306,16 @@
     } else if (t < FADE_START){
       nameSlot.style.opacity = "0";
     } else {
+      // The instant the card's blank face first becomes visible is also the
+      // reveal beat, so the impact sound fires right here (once per draw)
+      // and the drumroll — which has been building since playback started —
+      // cuts off at the same moment instead of overlapping the hit.
+      if (!hitPlayed){
+        hitPlayed = true;
+        sfxDrum.pause();
+        sfxHit.currentTime = 0;
+        sfxHit.play().catch(function(){});
+      }
       var pos = samplePath(t);
       var progress = Math.max(0, Math.min(1, (t - FADE_START) / (CLEAR_BY - FADE_START)));
       var eased = progress * progress * (3 - 2 * progress); // smoothstep
@@ -339,11 +354,16 @@
     tapStartBtn.classList.remove("is-visible");
     nameSlot.style.opacity = "0";
     fontFitted = false;
+    hitPlayed = false;
     currentTarget = NAMES[Math.floor(Math.random() * NAMES.length)];
     nameText.textContent = currentTarget;
 
     video.pause();
     video.currentTime = 0;
+    sfxDrum.pause();
+    sfxDrum.currentTime = 0;
+    sfxHit.pause();
+    sfxHit.currentTime = 0;
 
     // Always require a tap to start, instead of trying autoplay first and
     // only falling back to this button when autoplay is blocked. Some
@@ -357,6 +377,11 @@
 
   video.addEventListener("playing", function(){
     tapStartBtn.classList.remove("is-visible");
+    // The tap that starts the video is real user interaction, so it also
+    // satisfies the browser's autoplay-with-sound requirement for the
+    // drumroll — it starts the instant the draw actually begins playing.
+    sfxDrum.currentTime = 0;
+    sfxDrum.play().catch(function(){});
   });
   video.addEventListener("ended", onEnded);
   replayBtn.addEventListener("click", playSequence);
