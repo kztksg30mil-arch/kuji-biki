@@ -360,7 +360,7 @@
     }, reduceMotion ? 150 : 300));
   }
 
-  function playSequence(){
+  function playSequence(skipTap){
     clearTimers();
     replayBtn.classList.remove("is-visible");
     tapStartBtn.classList.remove("is-visible");
@@ -380,27 +380,35 @@
     sfxName.pause();
     sfxName.currentTime = 0;
 
-    // Always require a tap to start, instead of trying autoplay first and
-    // only falling back to this button when autoplay is blocked. Some
-    // browsers (iPhone Safari, when the video is muted + playsinline) allow
-    // autoplay outright, so the old "try autoplay, show the button only if
-    // it fails" logic meant the button never appeared there at all —
-    // playback just started on its own. Showing it unconditionally makes
-    // the experience identical on every device.
-    tapStartBtn.classList.add("is-visible");
+    if (skipTap){
+      // Called from the replay button's own click handler — that click is
+      // itself a real user gesture, so starting playback (with sound)
+      // directly from here is allowed without asking for a second tap.
+      video.play().catch(function(){});
+    } else {
+      // On first load there's been no interaction yet, so a tap is required
+      // before audio-with-sound playback is allowed. Always showing this
+      // (rather than trying autoplay first) keeps the experience identical
+      // on every device — some browsers (iPhone Safari, when the video is
+      // muted + playsinline) allow autoplay outright, so a "show the button
+      // only if autoplay fails" approach meant the button never appeared
+      // there at all.
+      tapStartBtn.classList.add("is-visible");
+    }
   }
 
   video.addEventListener("playing", function(){
     tapStartBtn.classList.remove("is-visible");
-    // The tap that starts the video is real user interaction, so it also
-    // satisfies the browser's autoplay-with-sound requirement for this
-    // sound — it starts the instant the draw actually begins playing, and
-    // the drumroll-into-jajan timing is already baked into the single file.
+    // The tap (or replay click) that starts the video is real user
+    // interaction, so it also satisfies the browser's autoplay-with-sound
+    // requirement for this sound — it starts the instant the draw actually
+    // begins playing, and the drumroll-into-jajan timing is already baked
+    // into the single file.
     sfxReveal.currentTime = 0;
     sfxReveal.play().catch(function(){});
   });
   video.addEventListener("ended", onEnded);
-  replayBtn.addEventListener("click", playSequence);
+  replayBtn.addEventListener("click", function(){ playSequence(true); });
   tapStartBtn.addEventListener("click", function(){
     tapStartBtn.classList.remove("is-visible");
     video.play().catch(function(){});
@@ -409,7 +417,7 @@
     if (currentTarget) nameText.style.fontSize = fitNameFont(currentTarget.text) + "px";
   });
 
-  playSequence();
+  playSequence(false);
   rafId = requestAnimationFrame(updateOverlay);
 })();
 </script>
