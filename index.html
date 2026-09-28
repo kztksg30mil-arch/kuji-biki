@@ -199,17 +199,19 @@
 (function(){
   "use strict";
 
-  // Each entry pairs the displayed name with the voice clip that shouts it
-  // right after the reveal hit — a genki announcer-style callout recorded
-  // per name rather than one generic sound, so the voice always matches the
-  // name that actually appears on the card.
+  // Each entry pairs the displayed name with 2 alternate voice-clip takes
+  // that shout it right after the reveal hit — a genki announcer-style
+  // callout recorded per name rather than one generic sound, so the voice
+  // always matches the name that actually appears on the card. Drawing the
+  // same name twice doesn't always sound identical: playSequence() below
+  // picks one of the 2 takes at random each time.
   var NAMES = [
-    { text: "もり", audio: "mori.mp3" },
-    { text: "のすけ", audio: "nosuke.mp3" },
-    { text: "はう", audio: "hau.mp3" },
-    { text: "せいや", audio: "seiya.mp3" },
-    { text: "たくみ", audio: "takumi.mp3" },
-    { text: "けんご", audio: "kengo.mp3" }
+    { text: "もり", audio: ["mori1.mp3", "mori2.mp3"] },
+    { text: "のすけ", audio: ["nosuke1.mp3", "nosuke2.mp3"] },
+    { text: "はう", audio: ["hau1.mp3", "hau2.mp3"] },
+    { text: "せいや", audio: ["seiya1.mp3", "seiya2.mp3"] },
+    { text: "たくみ", audio: ["takumi1.mp3", "takumi2.mp3"] },
+    { text: "けんご", audio: ["kengo1.mp3", "kengo2.mp3"] }
   ];
 
   // Measured (via frame-by-frame analysis) path of the card's blank interior
@@ -367,7 +369,9 @@
     namePlayed = false;
     currentTarget = NAMES[Math.floor(Math.random() * NAMES.length)];
     nameText.textContent = currentTarget.text;
-    sfxName.src = currentTarget.audio;
+    // Pick one of this name's 3 recorded takes at random, so repeat draws
+    // of the same name don't always play the identical clip.
+    sfxName.src = currentTarget.audio[Math.floor(Math.random() * currentTarget.audio.length)];
 
     video.pause();
     video.currentTime = 0;
