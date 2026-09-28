@@ -1,6 +1,6 @@
 <!doctype html>
 <meta charset="utf-8">
-<title>名前音声</title>
+<title>ドラム</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Yuji+Syuku&family=Zen+Maru+Gothic:wght@400;500;700;900&family=Klee+One:wght@600&display=swap');
 
@@ -187,7 +187,6 @@
   <div class="stage" id="stage" aria-live="polite">
     <video class="scene" id="video" src="draw-reveal.mp4" muted playsinline preload="auto"></video>
     <audio id="sfxReveal" src="reveal.mp3" preload="auto"></audio>
-    <audio id="sfxName" preload="auto"></audio>
     <div class="name-slot" id="nameSlot"><span id="nameText"></span></div>
     <button class="tap-start" id="tapStart" type="button"><span>タップして再生</span></button>
   </div>
@@ -199,19 +198,16 @@
 (function(){
   "use strict";
 
-  // Each entry pairs the displayed name with 2 alternate voice-clip takes
-  // that shout it right after the reveal hit — a genki announcer-style
-  // callout recorded per name rather than one generic sound, so the voice
-  // always matches the name that actually appears on the card. Drawing the
-  // same name twice doesn't always sound identical: playSequence() below
-  // picks one of the 2 takes at random each time.
+  // Drum-only version: no voice callout, so each entry is just the name
+  // shown on the card (kept as { text } objects so the rest of the code —
+  // fitNameFont(currentTarget.text), etc. — stays identical to index.html).
   var NAMES = [
-    { text: "もり", audio: ["mori1.mp3", "mori2.mp3"] },
-    { text: "のすけ", audio: ["nosuke1.mp3", "nosuke2.mp3"] },
-    { text: "はう", audio: ["hau1.mp3", "hau2.mp3"] },
-    { text: "せいや", audio: ["seiya1.mp3", "seiya2.mp3"] },
-    { text: "たくみ", audio: ["takumi1.mp3", "takumi2.mp3"] },
-    { text: "けんご", audio: ["kengo1.mp3", "kengo2.mp3"] }
+    { text: "もり" },
+    { text: "のすけ" },
+    { text: "はう" },
+    { text: "せいや" },
+    { text: "たくみ" },
+    { text: "けんご" }
   ];
 
   // Measured (via frame-by-frame analysis) path of the card's blank interior
@@ -260,12 +256,10 @@
   var tapStartBtn = document.getElementById("tapStart");
   var stageEl = document.getElementById("stage");
   var sfxReveal = document.getElementById("sfxReveal");
-  var sfxName = document.getElementById("sfxName");
 
   var timers = [];
   var rafId = null;
   var fontFitted = false;
-  var namePlayed = false;
 
   function clearTimers(){
     timers.forEach(function(t){ clearTimeout(t); });
@@ -319,15 +313,8 @@
     } else if (t < FADE_START){
       nameSlot.style.opacity = "0";
     } else {
-      // The instant the card's blank face first becomes visible lines up
-      // with the "jan!" hit baked into sfxReveal, so the name callout fires
-      // right here too (once per draw) — the announcer shouts the name just
-      // as it appears, overlapping the hit's natural ring-out.
-      if (!namePlayed){
-        namePlayed = true;
-        sfxName.currentTime = 0;
-        sfxName.play().catch(function(){});
-      }
+      // Drum-only version: no name-voice callout here, unlike index.html —
+      // just the drumroll+jajan in sfxReveal and the visual card reveal.
       var pos = samplePath(t);
       var progress = Math.max(0, Math.min(1, (t - FADE_START) / (CLEAR_BY - FADE_START)));
       var eased = progress * progress * (3 - 2 * progress); // smoothstep
@@ -366,19 +353,13 @@
     tapStartBtn.classList.remove("is-visible");
     nameSlot.style.opacity = "0";
     fontFitted = false;
-    namePlayed = false;
     currentTarget = NAMES[Math.floor(Math.random() * NAMES.length)];
     nameText.textContent = currentTarget.text;
-    // Pick one of this name's 3 recorded takes at random, so repeat draws
-    // of the same name don't always play the identical clip.
-    sfxName.src = currentTarget.audio[Math.floor(Math.random() * currentTarget.audio.length)];
 
     video.pause();
     video.currentTime = 0;
     sfxReveal.pause();
     sfxReveal.currentTime = 0;
-    sfxName.pause();
-    sfxName.currentTime = 0;
 
     // Always require a tap to start, instead of trying autoplay first and
     // only falling back to this button when autoplay is blocked. Some
