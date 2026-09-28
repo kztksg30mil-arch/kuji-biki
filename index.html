@@ -187,6 +187,7 @@
   <div class="stage" id="stage" aria-live="polite">
     <video class="scene" id="video" src="draw-reveal.mp4" muted playsinline preload="auto"></video>
     <audio id="sfxReveal" src="reveal.mp3" preload="auto"></audio>
+    <audio id="sfxName" preload="auto"></audio>
     <div class="name-slot" id="nameSlot"><span id="nameText"></span></div>
     <button class="tap-start" id="tapStart" type="button"><span>タップして再生</span></button>
   </div>
@@ -198,7 +199,18 @@
 (function(){
   "use strict";
 
-  var NAMES = ["もり", "のすけ", "はう", "せいや", "たくみ", "けんご"];
+  // Each entry pairs the displayed name with the voice clip that shouts it
+  // right after the reveal hit — a genki announcer-style callout recorded
+  // per name rather than one generic sound, so the voice always matches the
+  // name that actually appears on the card.
+  var NAMES = [
+    { text: "もり", audio: "mori.mp3" },
+    { text: "のすけ", audio: "nosuke.mp3" },
+    { text: "はう", audio: "hau.mp3" },
+    { text: "せいや", audio: "seiya.mp3" },
+    { text: "たくみ", audio: "takumi.mp3" },
+    { text: "けんご", audio: "kengo.mp3" }
+  ];
 
   // Measured (via frame-by-frame analysis) path of the card's blank interior
   // as it unfolds and settles: the card is still moving right up until
@@ -246,10 +258,12 @@
   var tapStartBtn = document.getElementById("tapStart");
   var stageEl = document.getElementById("stage");
   var sfxReveal = document.getElementById("sfxReveal");
+  var sfxName = document.getElementById("sfxName");
 
   var timers = [];
   var rafId = null;
   var fontFitted = false;
+  var namePlayed = false;
 
   function clearTimers(){
     timers.forEach(function(t){ clearTimeout(t); });
@@ -286,7 +300,7 @@
     return Math.max(9, Math.min(byHeight, byWidth));
   }
 
-  var currentTarget = "";
+  var currentTarget = null;
 
   function updateOverlay(){
     var t = video.currentTime;
@@ -303,6 +317,15 @@
     } else if (t < FADE_START){
       nameSlot.style.opacity = "0";
     } else {
+      // The instant the card's blank face first becomes visible lines up
+      // with the "jan!" hit baked into sfxReveal, so the name callout fires
+      // right here too (once per draw) — the announcer shouts the name just
+      // as it appears, overlapping the hit's natural ring-out.
+      if (!namePlayed){
+        namePlayed = true;
+        sfxName.currentTime = 0;
+        sfxName.play().catch(function(){});
+      }
       var pos = samplePath(t);
       var progress = Math.max(0, Math.min(1, (t - FADE_START) / (CLEAR_BY - FADE_START)));
       var eased = progress * progress * (3 - 2 * progress); // smoothstep
@@ -323,7 +346,7 @@
 
     if (!fontFitted && t >= FADE_START){
       fontFitted = true;
-      nameText.style.fontSize = fitNameFont(currentTarget) + "px";
+      nameText.style.fontSize = fitNameFont(currentTarget.text) + "px";
     }
 
     rafId = requestAnimationFrame(updateOverlay);
@@ -341,13 +364,17 @@
     tapStartBtn.classList.remove("is-visible");
     nameSlot.style.opacity = "0";
     fontFitted = false;
+    namePlayed = false;
     currentTarget = NAMES[Math.floor(Math.random() * NAMES.length)];
-    nameText.textContent = currentTarget;
+    nameText.textContent = currentTarget.text;
+    sfxName.src = currentTarget.audio;
 
     video.pause();
     video.currentTime = 0;
     sfxReveal.pause();
     sfxReveal.currentTime = 0;
+    sfxName.pause();
+    sfxName.currentTime = 0;
 
     // Always require a tap to start, instead of trying autoplay first and
     // only falling back to this button when autoplay is blocked. Some
@@ -375,7 +402,7 @@
     video.play().catch(function(){});
   });
   window.addEventListener("resize", function(){
-    if (currentTarget) nameText.style.fontSize = fitNameFont(currentTarget) + "px";
+    if (currentTarget) nameText.style.fontSize = fitNameFont(currentTarget.text) + "px";
   });
 
   playSequence();
